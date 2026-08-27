@@ -2,194 +2,240 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#6DDFFF">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>旅行伴侣</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#4ecdc4">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- ===== 左侧导航 ===== -->
-<nav class="sidebar">
-  <div class="sidebar-header">
-    <div class="logo">✈️</div>
-    <h1>旅行伴侣</h1>
-  </div>
-  <div class="nav-items">
-    <div class="nav-item active" onclick="switchTab('trips')">📋 我的旅行</div>
-    <div class="nav-item" onclick="switchTab('route')">🗺️ 路线导航</div>
-    <div class="nav-item" onclick="switchTab('english')">🗣️ 场景英语</div>
-    <div class="nav-item" onclick="switchTab('settings')">⚙️ 设置</div>
-  </div>
-</nav>
+<div class="app">
 
-<!-- ===== 主内容区 ===== -->
-<main class="main-content">
-
-  <!-- 视图1: 旅行计划列表 -->
-  <section id="view-trips" class="view active">
-    <div class="view-header">
-      <h2>我的旅行计划</h2>
-      <button class="btn-primary" onclick="showNewTripModal()">+ 新计划</button>
+  <!-- ===== 顶部 Header + 搜索栏 ===== -->
+  <header class="header">
+    <div class="header-top">
+      <div class="header-title" id="header-title">旅行伴侣</div>
+      <div class="header-icon" id="header-action" onclick="showNewTripModal()">＋</div>
     </div>
-    <div id="trip-list" class="trip-list"></div>
-  </section>
+    <div class="search-bar">
+      <span class="icon">🔍</span>
+      <input type="text" placeholder="搜索目的地、行程…" id="search-input" oninput="onSearch(this.value)">
+      <div class="btn-scan" title="筛选">⚙</div>
+    </div>
+  </header>
 
-  <!-- 视图2: 计划详情 -->
-  <section id="view-detail" class="view">
-    <div class="view-header">
-      <div>
-        <button class="btn-back" onclick="backToList()">← 返回</button>
-        <h2 id="detail-title"></h2>
-        <p id="detail-sub" class="subtitle"></p>
+  <!-- ===== 主内容区 ===== -->
+  <main class="content" id="main-content">
+
+    <!-- 视图1: 首页（行程列表） -->
+    <section id="view-trips" class="view active">
+      <!-- Banner -->
+      <div class="banner" onclick="showNewTripModal()">
+        <div class="banner-content">
+          <h3>出发吧</h3>
+          <p>有网做攻略，无网也能走</p>
+        </div>
+        <div class="banner-illustration">✈️</div>
       </div>
-      <div class="detail-actions">
-        <button class="btn-outline" onclick="duplicateTrip()">📋 复制计划</button>
+
+      <!-- 快捷入口 -->
+      <div class="section-title">
+        <h3>快捷入口</h3>
       </div>
-    </div>
-
-    <div id="trip-stats" class="stats-row"></div>
-
-    <div id="day-tabs" class="day-tabs"></div>
-
-    <div class="day-content">
-      <div id="activity-list" class="activity-list"></div>
-      <button class="btn-add" onclick="showAddActivityModal()">+ 添加活动</button>
-
-      <div class="notes-section">
-        <h4>📝 当日备注</h4>
-        <textarea id="day-notes-input" placeholder="写下提醒、注意事项…" oninput="saveDayNotes()"></textarea>
+      <div class="quick-actions">
+        <div class="quick-action-card" onclick="showNewTripModal()">
+          <div class="qa-icon blue">📋</div>
+          <div class="qa-text"><h4>新建计划</h4><p>创建旅行行程</p></div>
+        </div>
+        <div class="quick-action-card" onclick="switchTab('route')">
+          <div class="qa-icon green">🗺️</div>
+          <div class="qa-text"><h4>路线导航</h4><p>离线地图导航</p></div>
+        </div>
+        <div class="quick-action-card" onclick="switchTab('english')">
+          <div class="qa-icon yellow">🗣️</div>
+          <div class="qa-text"><h4>场景英语</h4><p>旅行常用对话</p></div>
+        </div>
+        <div class="quick-action-card" onclick="switchTab('settings')">
+          <div class="qa-icon purple">⚙️</div>
+          <div class="qa-text"><h4>设置</h4><p>偏好与数据</p></div>
+        </div>
       </div>
-    </div>
-  </section>
 
-  <!-- 视图3: 路线导航 -->
-  <section id="view-route" class="view">
-    <div class="view-header"><h2>🗺️ 路线导航</h2></div>
-    <div class="empty-state">
-      <div class="icon">🗺️</div>
-      <p>离线地图功能开发中</p>
-      <p style="font-size:.8rem;margin-top:8px;color:var(--text-dim)">敬请期待</p>
-    </div>
-  </section>
+      <!-- 行程列表 -->
+      <div class="section-title">
+        <h3>我的行程</h3>
+        <span class="more" onclick="showNewTripModal()">＋ 新建</span>
+      </div>
+      <div id="trip-list"></div>
+    </section>
 
-  <!-- 视图4: 场景英语 -->
-  <section id="view-english" class="view">
-    <div class="view-header"><h2>🗣️ 场景英语</h2></div>
-    <div class="empty-state">
-      <div class="icon">🗣️</div>
-      <p>场景英语功能开发中</p>
-      <p style="font-size:.8rem;margin-top:8px;color:var(--text-dim)">敬请期待</p>
-    </div>
-  </section>
+    <!-- 视图2: 行程详情 -->
+    <section id="view-detail" class="view">
+      <div class="view-header">
+        <div>
+          <button class="btn-back" onclick="backToList()">← 返回</button>
+          <h2 id="detail-title"></h2>
+          <p id="detail-sub" class="subtitle"></p>
+        </div>
+        <div>
+          <button class="btn-outline" onclick="duplicateTrip()" style="font-size:12px;padding:6px 14px">📋 复制</button>
+        </div>
+      </div>
+      <div id="trip-stats" class="stats-row"></div>
+      <div id="day-tabs" class="day-tabs"></div>
+      <div class="day-content">
+        <div id="activity-list" class="activity-list"></div>
+        <button class="btn-add" onclick="showAddActivityModal()">+ 添加活动</button>
+        <div class="notes-section">
+          <h4>📝 当日备注</h4>
+          <textarea id="day-notes-input" placeholder="写下提醒、注意事项…" oninput="saveDayNotes()"></textarea>
+        </div>
+      </div>
+    </section>
 
-  <!-- 视图5: 设置 -->
-  <section id="view-settings" class="view">
-    <div class="view-header"><h2>⚙️ 设置</h2></div>
-    <div class="empty-state">
-      <div class="icon">⚙️</div>
-      <p>设置功能开发中</p>
-    </div>
-  </section>
+    <!-- 视图3: 路线导航 -->
+    <section id="view-route" class="view">
+      <div class="empty-state">
+        <div class="icon">🗺️</div>
+        <p>离线地图功能开发中</p>
+        <p class="sub">敬请期待</p>
+      </div>
+    </section>
 
-</main>
+    <!-- 视图4: 场景英语 -->
+    <section id="view-english" class="view">
+      <div class="empty-state">
+        <div class="icon">🗣️</div>
+        <p>场景英语功能开发中</p>
+        <p class="sub">敬请期待</p>
+      </div>
+    </section>
 
-<!-- ===== Toast 通知 ===== -->
-<div id="toast" class="toast"></div>
+    <!-- 视图5: 设置 -->
+    <section id="view-settings" class="view">
+      <div class="empty-state">
+        <div class="icon">⚙️</div>
+        <p>设置功能开发中</p>
+      </div>
+    </section>
 
-<!-- ===== 弹窗: 新建计划 ===== -->
-<div id="modal-new-trip" class="modal-overlay">
-  <div class="modal">
-    <h3>新建旅行计划</h3>
-    <label>计划名称</label>
-    <input id="nt-name" type="text" placeholder="如：仙本那+吉隆坡 7天6晚">
-    <label>目的地</label>
-    <input id="nt-dest" type="text" placeholder="如：马来西亚">
-    <div class="form-row">
-      <div><label>开始日期</label><input id="nt-start" type="date"></div>
-      <div><label>结束日期</label><input id="nt-end" type="date"></div>
+  </main>
+
+  <!-- ===== 底部 Tab 栏 ===== -->
+  <nav class="bottom-nav">
+    <div class="tab-item active" onclick="switchTab('trips')" data-tab="trips">
+      <span class="tab-icon">📋</span>
+      <span class="tab-label">行程</span>
     </div>
-    <div class="form-row">
-      <div><label>人数</label><input id="nt-travelers" type="number" value="1" min="1"></div>
-      <div><label>预算（可选）</label><input id="nt-budget" type="number" placeholder="元"></div>
+    <div class="tab-item" onclick="switchTab('route')" data-tab="route">
+      <span class="tab-icon">🗺️</span>
+      <span class="tab-label">导航</span>
     </div>
-    <div class="modal-actions">
-      <button class="btn-outline" onclick="closeModal('modal-new-trip')">取消</button>
-      <button class="btn-primary" onclick="createTrip()">创建</button>
+    <div class="tab-item center" onclick="showNewTripModal()">
+      <span class="tab-icon">＋</span>
+    </div>
+    <div class="tab-item" onclick="switchTab('english')" data-tab="english">
+      <span class="tab-icon">🗣️</span>
+      <span class="tab-label">英语</span>
+    </div>
+    <div class="tab-item" onclick="switchTab('settings')" data-tab="settings">
+      <span class="tab-icon">⚙️</span>
+      <span class="tab-label">设置</span>
+    </div>
+  </nav>
+
+  <!-- ===== Toast ===== -->
+  <div id="toast" class="toast"></div>
+
+  <!-- ===== 弹窗: 新建计划 ===== -->
+  <div id="modal-new-trip" class="modal-overlay">
+    <div class="modal">
+      <h3>新建旅行计划</h3>
+      <label>计划名称</label>
+      <input id="nt-name" type="text" placeholder="如：仙本那+吉隆坡 7天6晚">
+      <label>目的地</label>
+      <input id="nt-dest" type="text" placeholder="如：马来西亚">
+      <div class="form-row">
+        <div><label>开始日期</label><input id="nt-start" type="date"></div>
+        <div><label>结束日期</label><input id="nt-end" type="date"></div>
+      </div>
+      <div class="form-row">
+        <div><label>人数</label><input id="nt-travelers" type="number" value="1" min="1"></div>
+        <div><label>预算（可选）</label><input id="nt-budget" type="number" placeholder="元"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-outline" onclick="closeModal('modal-new-trip')">取消</button>
+        <button class="btn-primary" onclick="createTrip()">创建</button>
+      </div>
     </div>
   </div>
+
+  <!-- ===== 弹窗: 添加活动 ===== -->
+  <div id="modal-add-activity" class="modal-overlay">
+    <div class="modal">
+      <h3>添加活动</h3>
+      <label>活动名称</label>
+      <input id="aa-name" type="text" placeholder="如：马达京岛浮潜">
+      <div class="form-row">
+        <div><label>开始时间</label><input id="aa-start" type="time"></div>
+        <div><label>结束时间</label><input id="aa-end" type="time"></div>
+      </div>
+      <label>类型</label>
+      <select id="aa-type">
+        <option value="attraction">🏖 景点</option>
+        <option value="restaurant">🍜 餐厅</option>
+        <option value="transport">🚗 交通</option>
+        <option value="hotel">🏨 住宿</option>
+        <option value="other">📌 其他</option>
+      </select>
+      <label>地点</label>
+      <input id="aa-location" type="text" placeholder="可选">
+      <label>备注</label>
+      <textarea id="aa-notes" placeholder="门票、注意事项…"></textarea>
+      <div class="modal-actions">
+        <button class="btn-outline" onclick="closeModal('modal-add-activity')">取消</button>
+        <button class="btn-primary" onclick="addActivity()">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 弹窗: 编辑活动 ===== -->
+  <div id="modal-edit-activity" class="modal-overlay">
+    <div class="modal">
+      <h3>编辑活动</h3>
+      <input id="ea-id" type="hidden">
+      <label>活动名称</label>
+      <input id="ea-name" type="text">
+      <div class="form-row">
+        <div><label>开始时间</label><input id="ea-start" type="time"></div>
+        <div><label>结束时间</label><input id="ea-end" type="time"></div>
+      </div>
+      <label>类型</label>
+      <select id="ea-type">
+        <option value="attraction">🏖 景点</option>
+        <option value="restaurant">🍜 餐厅</option>
+        <option value="transport">🚗 交通</option>
+        <option value="hotel">🏨 住宿</option>
+        <option value="other">📌 其他</option>
+      </select>
+      <label>地点</label>
+      <input id="ea-location" type="text">
+      <label>备注</label>
+      <textarea id="ea-notes"></textarea>
+      <div class="modal-actions">
+        <button class="btn-danger" onclick="deleteActivity()">🗑 删除</button>
+        <button class="btn-outline" onclick="closeModal('modal-edit-activity')">取消</button>
+        <button class="btn-primary" onclick="saveEditActivity()">保存</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<!-- ===== 弹窗: 添加活动 ===== -->
-<div id="modal-add-activity" class="modal-overlay">
-  <div class="modal">
-    <h3>添加活动</h3>
-    <label>活动名称</label>
-    <input id="aa-name" type="text" placeholder="如：马达京岛浮潜">
-    <div class="form-row">
-      <div><label>开始时间</label><input id="aa-start" type="time"></div>
-      <div><label>结束时间</label><input id="aa-end" type="time"></div>
-    </div>
-    <label>类型</label>
-    <select id="aa-type">
-      <option value="attraction">🏖 景点</option>
-      <option value="restaurant">🍜 餐厅</option>
-      <option value="transport">🚗 交通</option>
-      <option value="hotel">🏨 住宿</option>
-      <option value="other">📌 其他</option>
-    </select>
-    <label>地点</label>
-    <input id="aa-location" type="text" placeholder="可选">
-    <label>备注</label>
-    <textarea id="aa-notes" placeholder="门票、注意事项…"></textarea>
-    <div class="modal-actions">
-      <button class="btn-outline" onclick="closeModal('modal-add-activity')">取消</button>
-      <button class="btn-primary" onclick="addActivity()">添加</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 弹窗: 编辑活动 ===== -->
-<div id="modal-edit-activity" class="modal-overlay">
-  <div class="modal">
-    <h3>编辑活动</h3>
-    <input id="ea-id" type="hidden">
-    <label>活动名称</label>
-    <input id="ea-name" type="text">
-    <div class="form-row">
-      <div><label>开始时间</label><input id="ea-start" type="time"></div>
-      <div><label>结束时间</label><input id="ea-end" type="time"></div>
-    </div>
-    <label>类型</label>
-    <select id="ea-type">
-      <option value="attraction">🏖 景点</option>
-      <option value="restaurant">🍜 餐厅</option>
-      <option value="transport">🚗 交通</option>
-      <option value="hotel">🏨 住宿</option>
-      <option value="other">📌 其他</option>
-    </select>
-    <label>地点</label>
-    <input id="ea-location" type="text">
-    <label>备注</label>
-    <textarea id="ea-notes"></textarea>
-    <div class="modal-actions">
-      <button class="btn-danger" onclick="deleteActivity()">🗑 删除</button>
-      <button class="btn-outline" onclick="closeModal('modal-edit-activity')">取消</button>
-      <button class="btn-primary" onclick="saveEditActivity()">保存</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 底部导航（移动端） ===== -->
-<nav class="bottom-nav">
-  <div class="nav-item active" onclick="switchTab('trips')">📋 计划</div>
-  <div class="nav-item" onclick="switchTab('route')">🗺️ 导航</div>
-  <div class="nav-item" onclick="switchTab('english')">🗣️ 英语</div>
-  <div class="nav-item" onclick="switchTab('settings')">⚙️ 设置</div>
-</nav>
-
-<!-- Scripts: order matters -->
+<!-- Scripts -->
 <script src="utils.js"></script>
 <script src="db.js"></script>
 <script src="seed.js"></script>
