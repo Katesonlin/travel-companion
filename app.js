@@ -1,7 +1,10 @@
-// app.js — 旅行伴侣主逻辑
+// app.js — 旅行伴侣主逻辑（完整版）
 var currentTripId = null;
 var currentDayId = null;
 var currentDayIndex = 0;
+var currentLocationFilter = 'all';
+var currentPhraseFilter = 'all';
+var phraseSearchQuery = '';
 
 document.addEventListener('DOMContentLoaded', async function() {
   await ensureSeeded();
@@ -11,29 +14,26 @@ document.addEventListener('DOMContentLoaded', async function() {
   });
 });
 
-// ---- 视图切换 ----
+/* ── 视图切换 ── */
 function showView(name) {
   document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
   var el = document.getElementById('view-' + name);
   if (el) el.classList.add('active');
-  // 滚回顶部
   var content = document.getElementById('main-content');
   if (content) content.scrollTop = 0;
 }
 
 function switchTab(tab) {
-  // 更新底部 tab 高亮
   document.querySelectorAll('.bottom-nav .tab-item').forEach(function(t) {
     t.classList.toggle('active', t.dataset.tab === tab);
   });
-  // 更新顶部标题
   var titles = { trips: '旅行伴侣', route: '路线导航', english: '场景英语', settings: '设置' };
   document.getElementById('header-title').textContent = titles[tab] || '旅行伴侣';
-  if (tab === 'trips') {
-    backToList();
-  } else {
-    showView(tab);
-  }
+  document.getElementById('header-action').style.display = tab === 'trips' ? '' : 'none';
+  if (tab === 'trips') { backToList(); }
+  else if (tab === 'route') { showView('route'); renderLocations(); }
+  else if (tab === 'english') { showView('english'); renderPhrases(); }
+  else { showView(tab); }
 }
 
 function backToList() {
@@ -43,12 +43,24 @@ function backToList() {
   renderTripList();
 }
 
-// ---- 搜索 ----
-function onSearch(q) {
-  renderTripList(q.trim().toLowerCase());
+/* ── 搜索 ── */
+function onSearch(q) { renderTripList(q.trim().toLowerCase()); }
+
+/* ── 行程状态判断 ── */
+function getTripStatus(trip) {
+  var today = new Date().toISOString().split('T')[0];
+  if (today < trip.startDate) return 'upcoming';
+  if (today > trip.endDate) return 'completed';
+  return 'in-progress';
 }
 
-// ---- 行程列表 ----
+function getStatusBadge(status) {
+  if (status === 'upcoming') return { text: '未开始', bg: '#FFF3E0', color: '#F57C00' };
+  if (status === 'completed') return { text: '已完成', bg: '#E8F5E9', color: '#388E3C' };
+  return { text: '进行中', bg: '#E3F2FD', color: '#1976D2' };
+}
+
+/* ── 行程列表 ── */
 async function renderTripList(query) {
   var trips = await getAllTrips();
   var el = document.getElementById('trip-list');
@@ -63,10 +75,12 @@ async function renderTripList(query) {
   }
   el.innerHTML = trips.map(function(t) {
     var totalDays = daysBetween(t.startDate, t.endDate);
+    var status = getTripStatus(t);
+    var badge = getStatusBadge(status);
     return '<div class="trip-card" onclick="openTrip(\'' + t.id + '\')">' +
       '<div class="trip-card-header">' +
         '<div class="trip-card-title">' + esc(t.name) + '</div>' +
-        '<div class="trip-card-badge">进行中</div>' +
+        '<div class="trip-card-badge" style="background:' + badge.bg + ';color:' + badge.color + '">' + badge.text + '</div>' +
       '</div>' +
       '<div class="trip-card-meta">' +
         '<span>📅 ' + t.startDate + ' → ' + t.endDate + '</span>' +
@@ -77,10 +91,7 @@ async function renderTripList(query) {
       '<div class="trip-card-progress"><div class="bar" style="width:0%"></div></div>' +
     '</div>';
   }).join('');
-  // 更新进度条
-  for (var i = 0; i < trips.length; i++) {
-    updateTripProgress(trips[i].id);
-  }
+  for (var i = 0; i < trips.length; i++) { updateTripProgress(trips[i].id); }
 }
 
 async function updateTripProgress(tripId) {
@@ -97,17 +108,15 @@ async function updateTripProgress(tripId) {
     if (card.getAttribute('onclick').indexOf(tripId) >= 0) {
       var bar = card.querySelector('.bar');
       if (bar) bar.style.width = pct + '%';
-      var badge = card.querySelector('.trip-card-badge');
-      if (badge) {
-        if (pct >= 100) { badge.textContent = '已完成'; badge.style.background = '#E8F5E9'; badge.style.color = '#388E3C'; }
-        else if (pct > 0) { badge.textContent = pct + '%'; }
-        else { badge.textContent = '未开始'; badge.style.background = '#FFF3E0'; badge.style.color = '#F57C00'; }
+      if (pct >= 100) {
+        var badge = card.querySelector('.trip-card-badge');
+        if (badge) { badge.textContent = '已完成'; badge.style.background = '#E8F5E9'; badge.style.color = '#388E3C'; }
       }
     }
   });
 }
 
-// ---- 打开行程详情 ----
+/* ── 打开行程详情 ── */
 async function openTrip(tripId) {
   currentTripId = tripId;
   var trip = await getTrip(tripId);
@@ -137,7 +146,7 @@ async function openTrip(tripId) {
   if (days.length) switchDay(0, days[0].id);
 }
 
-// ---- 切换日期 ----
+/* ── 切换日期 ── */
 async function switchDay(index, dayId) {
   currentDayIndex = index;
   currentDayId = dayId;
@@ -168,7 +177,7 @@ async function switchDay(index, dayId) {
   }).join('');
 }
 
-// ---- 完成切换 ----
+/* ── 完成切换 ── */
 async function toggleComplete(actId) {
   var act = await dbGet(STORES.activities, actId);
   act.isCompleted = !act.isCompleted;
@@ -177,7 +186,7 @@ async function toggleComplete(actId) {
   refreshStats();
 }
 
-// ---- 拖拽排序 ----
+/* ── 拖拽排序 ── */
 var dragId = null;
 function onDragStart(e) { dragId = e.currentTarget.dataset.id; e.currentTarget.classList.add('dragging'); }
 function onDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
@@ -197,7 +206,7 @@ async function onDrop(e) {
   switchDay(currentDayIndex, currentDayId);
 }
 
-// ---- 添加活动 ----
+/* ── 添加活动 ── */
 function showAddActivityModal() {
   if (!currentDayId) return;
   document.getElementById('aa-name').value = '';
@@ -228,7 +237,7 @@ async function addActivity() {
   toast('已添加');
 }
 
-// ---- 编辑活动 ----
+/* ── 编辑活动 ── */
 async function editActivity(actId) {
   var act = await dbGet(STORES.activities, actId);
   if (!act) return;
@@ -268,7 +277,7 @@ async function deleteActivity() {
   toast('已删除');
 }
 
-// ---- 备注自动保存 ----
+/* ── 备注自动保存 ── */
 var notesTimer = null;
 async function saveDayNotes() {
   clearTimeout(notesTimer);
@@ -280,7 +289,7 @@ async function saveDayNotes() {
   }, 500);
 }
 
-// ---- 新建计划 ----
+/* ── 新建计划 ── */
 function showNewTripModal() {
   document.getElementById('nt-name').value = '';
   document.getElementById('nt-dest').value = '';
@@ -315,7 +324,52 @@ async function createTrip() {
   openTrip(trip.id);
 }
 
-// ---- 复制计划 ----
+/* ── 编辑计划 ── */
+async function showEditTripModal() {
+  var trip = await getTrip(currentTripId);
+  if (!trip) return;
+  document.getElementById('et-id').value = trip.id;
+  document.getElementById('et-name').value = trip.name;
+  document.getElementById('et-dest').value = trip.destination;
+  document.getElementById('et-start').value = trip.startDate;
+  document.getElementById('et-end').value = trip.endDate;
+  document.getElementById('et-travelers').value = trip.travelers;
+  document.getElementById('et-budget').value = trip.budget || '';
+  openModal('modal-edit-trip');
+}
+
+async function saveEditTrip() {
+  var id = document.getElementById('et-id').value;
+  var trip = await getTrip(id);
+  if (!trip) return;
+  trip.name = document.getElementById('et-name').value.trim();
+  trip.destination = document.getElementById('et-dest').value.trim();
+  trip.startDate = document.getElementById('et-start').value;
+  trip.endDate = document.getElementById('et-end').value;
+  trip.travelers = parseInt(document.getElementById('et-travelers').value) || 1;
+  trip.budget = parseFloat(document.getElementById('et-budget').value) || null;
+  await saveTrip(trip);
+  closeModal('modal-edit-trip');
+  openTrip(trip.id);
+  toast('已保存');
+}
+
+/* ── 删除计划 ── */
+async function deleteTrip() {
+  if (!currentTripId) return;
+  if (!confirm('确认删除此旅行计划？所有行程数据将被删除。')) return;
+  var days = await getDays(currentTripId);
+  for (var d of days) {
+    var acts = await getActivities(d.id);
+    for (var a of acts) { await deleteActivityById(a.id); }
+    await deleteDayById(d.id);
+  }
+  await deleteTripById(currentTripId);
+  toast('已删除');
+  backToList();
+}
+
+/* ── 复制计划 ── */
 async function duplicateTrip() {
   var orig = await getTrip(currentTripId);
   if (!orig) return;
@@ -334,7 +388,95 @@ async function duplicateTrip() {
   openTrip(newTrip.id);
 }
 
-// ---- 刷新统计 ----
+/* ── 行程分享（Canvas 长图） ── */
+async function shareTrip() {
+  var trip = await getTrip(currentTripId);
+  if (!trip) return;
+  var days = await getDays(currentTripId);
+  var canvas = document.getElementById('share-canvas');
+  var ctx = canvas.getContext('2d');
+  var W = 750, padding = 40, y = 0;
+
+  // 计算总高度
+  var totalH = 200; // header
+  for (var d of days) {
+    var acts = await getActivities(d.id);
+    totalH += 60 + acts.length * 36 + 20;
+  }
+  totalH += 100; // footer
+  canvas.height = totalH;
+  canvas.width = W;
+
+  // 背景
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, W, totalH);
+
+  // 渐变头
+  var grad = ctx.createLinearGradient(0, 0, W, 160);
+  grad.addColorStop(0, '#6DDFFF');
+  grad.addColorStop(1, '#91E3FA');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, 160);
+
+  // 标题
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = 'bold 32px Inter, -apple-system, sans-serif';
+  ctx.fillText(trip.name, padding, 60);
+  ctx.font = '18px Inter, -apple-system, sans-serif';
+  ctx.fillText('📍 ' + trip.destination + '  📅 ' + trip.startDate + ' → ' + trip.endDate + '  👥 ' + trip.travelers + '人', padding, 100);
+  ctx.font = '14px Inter, -apple-system, sans-serif';
+  ctx.fillText('有网做攻略，无网也能走 · 旅行伴侣', padding, 135);
+  y = 180;
+
+  // 每日行程
+  for (var i = 0; i < days.length; i++) {
+    var day = days[i];
+    var dt = new Date(day.date);
+    var acts = await getActivities(day.id);
+
+    // 日期标题
+    ctx.fillStyle = '#6DDFFF';
+    ctx.beginPath();
+    ctx.roundRect(padding, y, W - padding * 2, 40, 8);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 16px Inter, -apple-system, sans-serif';
+    ctx.fillText('Day ' + (i + 1) + ' · ' + (dt.getMonth() + 1) + '月' + dt.getDate() + '日', padding + 12, y + 27);
+    y += 50;
+
+    // 活动列表
+    ctx.fillStyle = '#2C3539';
+    ctx.font = '15px Inter, -apple-system, sans-serif';
+    for (var j = 0; j < acts.length; j++) {
+      var a = acts[j];
+      var prefix = (a.startTime || '') + (a.startTime ? ' ' : '');
+      var text = prefix + a.name + (a.location ? ' · ' + a.location : '');
+      var check = a.isCompleted ? '✅ ' : '⬜ ';
+      ctx.fillText(check + text, padding + 8, y + 20);
+      y += 36;
+    }
+    y += 20;
+  }
+
+  // 页脚
+  y += 10;
+  ctx.fillStyle = '#A0A3A6';
+  ctx.font = '12px Inter, -apple-system, sans-serif';
+  ctx.fillText('Generated by 旅行伴侣 · ' + new Date().toLocaleDateString(), padding, y);
+
+  openModal('modal-share');
+}
+
+function downloadShareImage() {
+  var canvas = document.getElementById('share-canvas');
+  var link = document.createElement('a');
+  link.download = '行程分享.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  toast('图片已保存');
+}
+
+/* ── 刷新统计 ── */
 async function refreshStats() {
   if (!currentTripId) return;
   var days = await getDays(currentTripId);
@@ -348,4 +490,230 @@ async function refreshStats() {
     '<div class="stat-card"><div class="stat-val">' + days.length + '</div><div class="stat-label">天数</div></div>' +
     '<div class="stat-card"><div class="stat-val">' + totalActs + '</div><div class="stat-label">活动</div></div>' +
     '<div class="stat-card"><div class="stat-val">' + completed + '</div><div class="stat-label">已完成</div></div>';
+}
+
+/* ══════════════════════════════════════════
+   模块二：路线导航
+   ══════════════════════════════════════════ */
+
+function filterLocations(cat) {
+  currentLocationFilter = cat;
+  document.querySelectorAll('#location-filters .filter-tab').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.cat === cat);
+  });
+  renderLocations();
+}
+
+async function renderLocations() {
+  var locs = await getAllLocations();
+  if (currentLocationFilter !== 'all') {
+    locs = locs.filter(function(l) { return l.category === currentLocationFilter; });
+  }
+  var el = document.getElementById('location-list');
+  if (!locs.length) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">📍</div><p>暂无收藏地点</p><p class="sub">点击右上角添加</p></div>';
+    return;
+  }
+  var catIcons = { attraction: '🏖', restaurant: '🍜', hotel: '🏨', transport: '🚗', other: '📌' };
+  el.innerHTML = locs.map(function(l) {
+    var mapLink = l.lat && l.lng
+      ? 'https://www.google.com/maps?q=' + l.lat + ',' + l.lng
+      : 'https://www.google.com/maps/search/' + encodeURIComponent(l.name + ' ' + l.address);
+    return '<div class="location-card">' +
+      '<div class="location-header" onclick="showEditLocationModal(\'' + l.id + '\')">' +
+        '<div class="location-icon">' + (catIcons[l.category] || '📌') + '</div>' +
+        '<div class="location-info">' +
+          '<div class="location-name">' + esc(l.name) + '</div>' +
+          '<div class="location-addr">' + esc(l.address) + '</div>' +
+          (l.notes ? '<div class="location-notes">' + esc(l.notes) + '</div>' : '') +
+        '</div>' +
+      '</div>' +
+      '<a class="btn-map" href="' + mapLink + '" target="_blank" rel="noopener">🗺️ 导航</a>' +
+    '</div>';
+  }).join('');
+}
+
+function showAddLocationModal() {
+  document.getElementById('al-name').value = '';
+  document.getElementById('al-address').value = '';
+  document.getElementById('al-category').value = 'attraction';
+  document.getElementById('al-notes').value = '';
+  document.getElementById('al-lat').value = '';
+  document.getElementById('al-lng').value = '';
+  openModal('modal-add-location');
+}
+
+async function addLocation() {
+  var name = document.getElementById('al-name').value.trim();
+  if (!name) return toast('请输入地点名称');
+  await saveLocation({
+    id: uid(), name: name,
+    address: document.getElementById('al-address').value.trim(),
+    category: document.getElementById('al-category').value,
+    notes: document.getElementById('al-notes').value.trim() || null,
+    lat: parseFloat(document.getElementById('al-lat').value) || null,
+    lng: parseFloat(document.getElementById('al-lng').value) || null,
+    tripId: null,
+    createdAt: new Date().toISOString()
+  });
+  closeModal('modal-add-location');
+  renderLocations();
+  toast('已添加');
+}
+
+async function showEditLocationModal(locId) {
+  var loc = await getLocation(locId);
+  if (!loc) return;
+  document.getElementById('el-id').value = loc.id;
+  document.getElementById('el-name').value = loc.name;
+  document.getElementById('el-address').value = loc.address || '';
+  document.getElementById('el-category').value = loc.category;
+  document.getElementById('el-notes').value = loc.notes || '';
+  document.getElementById('el-lat').value = loc.lat || '';
+  document.getElementById('el-lng').value = loc.lng || '';
+  openModal('modal-edit-location');
+}
+
+async function saveEditLocation() {
+  var id = document.getElementById('el-id').value;
+  var loc = await getLocation(id);
+  if (!loc) return;
+  loc.name = document.getElementById('el-name').value.trim();
+  loc.address = document.getElementById('el-address').value.trim();
+  loc.category = document.getElementById('el-category').value;
+  loc.notes = document.getElementById('el-notes').value.trim() || null;
+  loc.lat = parseFloat(document.getElementById('el-lat').value) || null;
+  loc.lng = parseFloat(document.getElementById('el-lng').value) || null;
+  await saveLocation(loc);
+  closeModal('modal-edit-location');
+  renderLocations();
+  toast('已保存');
+}
+
+async function deleteLocation() {
+  var id = document.getElementById('el-id').value;
+  if (!confirm('确认删除此地点？')) return;
+  await deleteLocationById(id);
+  closeModal('modal-edit-location');
+  renderLocations();
+  toast('已删除');
+}
+
+/* ══════════════════════════════════════════
+   模块三：场景英语
+   ══════════════════════════════════════════ */
+
+function filterPhrases(cat) {
+  currentPhraseFilter = cat;
+  document.querySelectorAll('#phrase-filters .filter-tab').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.cat === cat);
+  });
+  renderPhrases();
+}
+
+function onPhraseSearch(q) {
+  phraseSearchQuery = q.trim().toLowerCase();
+  renderPhrases();
+}
+
+async function renderPhrases() {
+  var phrases = await getAllPhrases();
+  var catNames = { airport: '机场', hotel: '酒店', restaurant: '餐厅', transport: '交通', shopping: '购物', emergency: '紧急情况' };
+  var catIcons = { airport: '✈️', hotel: '🏨', restaurant: '🍜', transport: '🚗', shopping: '🛍️', emergency: '🆘' };
+
+  // 过滤
+  if (currentPhraseFilter === 'favorites') {
+    phrases = phrases.filter(function(p) { return p.isFavorite; });
+  } else if (currentPhraseFilter !== 'all') {
+    phrases = phrases.filter(function(p) { return p.category === currentPhraseFilter; });
+  }
+
+  // 搜索
+  if (phraseSearchQuery) {
+    phrases = phrases.filter(function(p) {
+      return p.zh.toLowerCase().indexOf(phraseSearchQuery) >= 0 ||
+             p.en.toLowerCase().indexOf(phraseSearchQuery) >= 0;
+    });
+  }
+
+  var el = document.getElementById('phrase-list');
+  if (!phrases.length) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">🗣️</div><p>暂无短语</p></div>';
+    return;
+  }
+
+  // 按分类分组显示
+  var groups = {};
+  phrases.forEach(function(p) {
+    if (!groups[p.category]) groups[p.category] = [];
+    groups[p.category].push(p);
+  });
+
+  var html = '';
+  for (var cat in groups) {
+    html += '<div class="phrase-group"><div class="phrase-group-title">' + (catIcons[cat] || '📖') + ' ' + (catNames[cat] || cat) + '</div>';
+    groups[cat].forEach(function(p) {
+      html += '<div class="phrase-card" onclick="toggleFavorite(\'' + p.id + '\')">' +
+        '<div class="phrase-content">' +
+          '<div class="phrase-en">' + esc(p.en) + '</div>' +
+          '<div class="phrase-zh">' + esc(p.zh) + '</div>' +
+        '</div>' +
+        '<div class="phrase-fav">' + (p.isFavorite ? '⭐' : '☆') + '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+async function toggleFavorite(phraseId) {
+  var p = await getPhrase(phraseId);
+  if (!p) return;
+  p.isFavorite = !p.isFavorite;
+  await savePhrase(p);
+  renderPhrases();
+}
+
+/* ══════════════════════════════════════════
+   设置页
+   ══════════════════════════════════════════ */
+
+async function exportData() {
+  var data = await exportAllData();
+  var json = JSON.stringify(data, null, 2);
+  var blob = new Blob([json], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'travel-companion-backup-' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('数据已导出');
+}
+
+async function importData(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      if (!confirm('导入将覆盖现有所有数据，确认继续？')) return;
+      await importAllData(data);
+      toast('数据已导入，刷新页面生效');
+      setTimeout(function() { location.reload(); }, 1500);
+    } catch (err) {
+      toast('导入失败：文件格式错误');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+async function clearData() {
+  if (!confirm('确认清除所有数据？此操作不可恢复。')) return;
+  if (!confirm('再次确认：删除所有行程、收藏地点和英语短语数据？')) return;
+  await clearAllData();
+  toast('数据已清除，刷新页面');
+  setTimeout(function() { location.reload(); }, 1500);
 }

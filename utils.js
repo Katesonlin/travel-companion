@@ -4,29 +4,38 @@ function uid() {
 }
 
 function daysBetween(start, end) {
-  const s = new Date(start), e = new Date(end);
+  var s = new Date(start), e = new Date(end);
   return Math.round((e - s) / 86400000) + 1;
 }
 
 function dateOffset(start, i) {
-  const d = new Date(start);
+  var d = new Date(start);
   d.setDate(d.getDate() + i);
   return d.toISOString().split('T')[0];
 }
 
 function esc(s) {
-  const d = document.createElement('div');
+  var d = document.createElement('div');
   d.textContent = s || '';
   return d.innerHTML;
 }
 
-function openModal(id) { document.getElementById(id).classList.add('show'); }
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function openModal(id) {
+  document.getElementById(id).classList.add('show');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
 
 function toast(msg) {
-  const el = document.getElementById('toast');
+  var el = document.getElementById('toast');
   if (!el) return;
   el.textContent = msg;
   el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2000);
+  setTimeout(function() { el.classList.remove('show'); }, 2200);
+}
+
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
 }

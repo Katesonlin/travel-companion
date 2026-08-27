@@ -32,7 +32,6 @@
 
     <!-- 视图1: 首页（行程列表） -->
     <section id="view-trips" class="view active">
-      <!-- Banner -->
       <div class="banner" onclick="showNewTripModal()">
         <div class="banner-content">
           <h3>出发吧</h3>
@@ -40,8 +39,6 @@
         </div>
         <div class="banner-illustration">✈️</div>
       </div>
-
-      <!-- 快捷入口 -->
       <div class="section-title">
         <h3>快捷入口</h3>
       </div>
@@ -63,8 +60,6 @@
           <div class="qa-text"><h4>设置</h4><p>偏好与数据</p></div>
         </div>
       </div>
-
-      <!-- 行程列表 -->
       <div class="section-title">
         <h3>我的行程</h3>
         <span class="more" onclick="showNewTripModal()">＋ 新建</span>
@@ -80,8 +75,11 @@
           <h2 id="detail-title"></h2>
           <p id="detail-sub" class="subtitle"></p>
         </div>
-        <div>
-          <button class="btn-outline" onclick="duplicateTrip()" style="font-size:12px;padding:6px 14px">📋 复制</button>
+        <div class="detail-actions">
+          <button class="btn-outline" onclick="shareTrip()" style="font-size:12px;padding:6px 10px">📸 分享</button>
+          <button class="btn-outline" onclick="duplicateTrip()" style="font-size:12px;padding:6px 10px">📋 复制</button>
+          <button class="btn-outline" onclick="showEditTripModal()" style="font-size:12px;padding:6px 10px">✏️ 编辑</button>
+          <button class="btn-outline btn-danger-text" onclick="deleteTrip()" style="font-size:12px;padding:6px 10px">🗑</button>
         </div>
       </div>
       <div id="trip-stats" class="stats-row"></div>
@@ -98,27 +96,75 @@
 
     <!-- 视图3: 路线导航 -->
     <section id="view-route" class="view">
-      <div class="empty-state">
-        <div class="icon">🗺️</div>
-        <p>离线地图功能开发中</p>
-        <p class="sub">敬请期待</p>
+      <div class="section-title">
+        <h3>📍 收藏地点</h3>
+        <span class="more" onclick="showAddLocationModal()">＋ 添加</span>
       </div>
+      <div class="filter-tabs" id="location-filters">
+        <div class="filter-tab active" data-cat="all" onclick="filterLocations('all')">全部</div>
+        <div class="filter-tab" data-cat="attraction" onclick="filterLocations('attraction')">🏖 景点</div>
+        <div class="filter-tab" data-cat="restaurant" onclick="filterLocations('restaurant')">🍜 餐厅</div>
+        <div class="filter-tab" data-cat="hotel" onclick="filterLocations('hotel')">🏨 住宿</div>
+        <div class="filter-tab" data-cat="transport" onclick="filterLocations('transport')">🚗 交通</div>
+        <div class="filter-tab" data-cat="other" onclick="filterLocations('other')">📌 其他</div>
+      </div>
+      <div id="location-list"></div>
     </section>
 
     <!-- 视图4: 场景英语 -->
     <section id="view-english" class="view">
-      <div class="empty-state">
-        <div class="icon">🗣️</div>
-        <p>场景英语功能开发中</p>
-        <p class="sub">敬请期待</p>
+      <div class="search-bar-mini">
+        <span class="icon">🔍</span>
+        <input type="text" placeholder="搜索短语…" id="phrase-search" oninput="onPhraseSearch(this.value)">
       </div>
+      <div class="filter-tabs" id="phrase-filters">
+        <div class="filter-tab active" data-cat="all" onclick="filterPhrases('all')">全部</div>
+        <div class="filter-tab" data-cat="favorites" onclick="filterPhrases('favorites')">⭐ 收藏</div>
+        <div class="filter-tab" data-cat="airport" onclick="filterPhrases('airport')">✈️ 机场</div>
+        <div class="filter-tab" data-cat="hotel" onclick="filterPhrases('hotel')">🏨 酒店</div>
+        <div class="filter-tab" data-cat="restaurant" onclick="filterPhrases('restaurant')">🍜 餐厅</div>
+        <div class="filter-tab" data-cat="transport" onclick="filterPhrases('transport')">🚗 交通</div>
+        <div class="filter-tab" data-cat="shopping" onclick="filterPhrases('shopping')">🛍️ 购物</div>
+        <div class="filter-tab" data-cat="emergency" onclick="filterPhrases('emergency')">🆘 紧急</div>
+      </div>
+      <div id="phrase-list"></div>
     </section>
 
     <!-- 视图5: 设置 -->
     <section id="view-settings" class="view">
-      <div class="empty-state">
-        <div class="icon">⚙️</div>
-        <p>设置功能开发中</p>
+      <div class="settings-group">
+        <h3>数据管理</h3>
+        <div class="settings-item" onclick="exportData()">
+          <div class="settings-icon">📤</div>
+          <div class="settings-text"><h4>导出数据</h4><p>将所有行程和收藏导出为JSON文件</p></div>
+          <div class="settings-arrow">›</div>
+        </div>
+        <div class="settings-item" onclick="document.getElementById('import-file').click()">
+          <div class="settings-icon">📥</div>
+          <div class="settings-text"><h4>导入数据</h4><p>从JSON备份文件恢复数据</p></div>
+          <div class="settings-arrow">›</div>
+        </div>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+        <div class="settings-item" onclick="clearData()">
+          <div class="settings-icon">🗑️</div>
+          <div class="settings-text"><h4>清除所有数据</h4><p>删除全部行程、收藏和短语数据</p></div>
+          <div class="settings-arrow">›</div>
+        </div>
+      </div>
+      <div class="settings-group">
+        <h3>关于</h3>
+        <div class="settings-item">
+          <div class="settings-icon">✈️</div>
+          <div class="settings-text"><h4>旅行伴侣</h4><p>有网做攻略，无网也能走</p></div>
+        </div>
+        <div class="settings-item">
+          <div class="settings-icon">📌</div>
+          <div class="settings-text"><h4>版本</h4><p>v2.0.0</p></div>
+        </div>
+        <div class="settings-item">
+          <div class="settings-icon">🐙</div>
+          <div class="settings-text"><h4>GitHub</h4><p>github.com/Katesonlin/travel-companion</p></div>
+        </div>
       </div>
     </section>
 
@@ -127,23 +173,19 @@
   <!-- ===== 底部 Tab 栏 ===== -->
   <nav class="bottom-nav">
     <div class="tab-item active" onclick="switchTab('trips')" data-tab="trips">
-      <span class="tab-icon">📋</span>
-      <span class="tab-label">行程</span>
+      <span class="tab-icon">📋</span><span class="tab-label">行程</span>
     </div>
     <div class="tab-item" onclick="switchTab('route')" data-tab="route">
-      <span class="tab-icon">🗺️</span>
-      <span class="tab-label">导航</span>
+      <span class="tab-icon">🗺️</span><span class="tab-label">导航</span>
     </div>
     <div class="tab-item center" onclick="showNewTripModal()">
       <span class="tab-icon">＋</span>
     </div>
     <div class="tab-item" onclick="switchTab('english')" data-tab="english">
-      <span class="tab-icon">🗣️</span>
-      <span class="tab-label">英语</span>
+      <span class="tab-icon">🗣️</span><span class="tab-label">英语</span>
     </div>
     <div class="tab-item" onclick="switchTab('settings')" data-tab="settings">
-      <span class="tab-icon">⚙️</span>
-      <span class="tab-label">设置</span>
+      <span class="tab-icon">⚙️</span><span class="tab-label">设置</span>
     </div>
   </nav>
 
@@ -169,6 +211,30 @@
       <div class="modal-actions">
         <button class="btn-outline" onclick="closeModal('modal-new-trip')">取消</button>
         <button class="btn-primary" onclick="createTrip()">创建</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 弹窗: 编辑计划 ===== -->
+  <div id="modal-edit-trip" class="modal-overlay">
+    <div class="modal">
+      <h3>编辑旅行计划</h3>
+      <input id="et-id" type="hidden">
+      <label>计划名称</label>
+      <input id="et-name" type="text" placeholder="计划名称">
+      <label>目的地</label>
+      <input id="et-dest" type="text" placeholder="目的地">
+      <div class="form-row">
+        <div><label>开始日期</label><input id="et-start" type="date"></div>
+        <div><label>结束日期</label><input id="et-end" type="date"></div>
+      </div>
+      <div class="form-row">
+        <div><label>人数</label><input id="et-travelers" type="number" min="1"></div>
+        <div><label>预算（可选）</label><input id="et-budget" type="number" placeholder="元"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-outline" onclick="closeModal('modal-edit-trip')">取消</button>
+        <button class="btn-primary" onclick="saveEditTrip()">保存</button>
       </div>
     </div>
   </div>
@@ -229,6 +295,78 @@
         <button class="btn-danger" onclick="deleteActivity()">🗑 删除</button>
         <button class="btn-outline" onclick="closeModal('modal-edit-activity')">取消</button>
         <button class="btn-primary" onclick="saveEditActivity()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 弹窗: 添加地点 ===== -->
+  <div id="modal-add-location" class="modal-overlay">
+    <div class="modal">
+      <h3>添加收藏地点</h3>
+      <label>名称</label>
+      <input id="al-name" type="text" placeholder="如：双子塔">
+      <label>地址</label>
+      <input id="al-address" type="text" placeholder="详细地址">
+      <label>分类</label>
+      <select id="al-category">
+        <option value="attraction">🏖 景点</option>
+        <option value="restaurant">🍜 餐厅</option>
+        <option value="hotel">🏨 住宿</option>
+        <option value="transport">🚗 交通</option>
+        <option value="other">📌 其他</option>
+      </select>
+      <label>备注</label>
+      <textarea id="al-notes" placeholder="补充说明…"></textarea>
+      <div class="form-row">
+        <div><label>纬度（可选）</label><input id="al-lat" type="number" step="any" placeholder="3.1578"></div>
+        <div><label>经度（可选）</label><input id="al-lng" type="number" step="any" placeholder="101.7116"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-outline" onclick="closeModal('modal-add-location')">取消</button>
+        <button class="btn-primary" onclick="addLocation()">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 弹窗: 编辑地点 ===== -->
+  <div id="modal-edit-location" class="modal-overlay">
+    <div class="modal">
+      <h3>编辑地点</h3>
+      <input id="el-id" type="hidden">
+      <label>名称</label>
+      <input id="el-name" type="text">
+      <label>地址</label>
+      <input id="el-address" type="text">
+      <label>分类</label>
+      <select id="el-category">
+        <option value="attraction">🏖 景点</option>
+        <option value="restaurant">🍜 餐厅</option>
+        <option value="hotel">🏨 住宿</option>
+        <option value="transport">🚗 交通</option>
+        <option value="other">📌 其他</option>
+      </select>
+      <label>备注</label>
+      <textarea id="el-notes"></textarea>
+      <div class="form-row">
+        <div><label>纬度</label><input id="el-lat" type="number" step="any"></div>
+        <div><label>经度</label><input id="el-lng" type="number" step="any"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-danger" onclick="deleteLocation()">🗑 删除</button>
+        <button class="btn-outline" onclick="closeModal('modal-edit-location')">取消</button>
+        <button class="btn-primary" onclick="saveEditLocation()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 分享预览 Canvas ===== -->
+  <div id="modal-share" class="modal-overlay">
+    <div class="modal" style="max-width:400px">
+      <h3>行程分享</h3>
+      <canvas id="share-canvas" width="750" style="width:100%;border-radius:12px"></canvas>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn-outline" onclick="closeModal('modal-share')">关闭</button>
+        <button class="btn-primary" onclick="downloadShareImage()">💾 保存图片</button>
       </div>
     </div>
   </div>
