@@ -1,0 +1,16 @@
+{
+  "name": "旅行伴侣",
+  "short_name": "旅行伴侣",
+  "description": "有网做攻略，无网也能走 — 基于 OpenClaw 的全离线旅行伴侣",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f0f0f",
+  "theme_color": "#4ecdc4",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
